@@ -798,7 +798,8 @@ module ChefConfig
 
     # Configuration options for Data Collector reporting. These settings allow
     # the user to configure where to send their Data Collector data, what token
-    # to send, and whether Visibility should run in client mode vs. solo mode.
+    # to send, and whether Data Collector should report its findings in client
+    # mode vs. solo mode.
     default :data_collector_server_url,       nil
     default :data_collector_token,            nil
     default :data_collector_mode,             :both
