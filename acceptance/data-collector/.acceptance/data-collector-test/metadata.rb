@@ -1,0 +1,7 @@
+name 'data-collector-test'
+maintainer 'The Authors'
+maintainer_email 'you@example.com'
+license 'all_rights'
+description 'Installs/Configures data-collector-test'
+long_description 'Installs/Configures data-collector-test'
+version '0.1.0'
