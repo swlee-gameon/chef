@@ -94,7 +94,7 @@ class Chef
       def success?
         !self.exception
       end
-    end # End class ResouceReport
+    end # End class ResourceReport
 
     class Reporter < EventDispatch::Base
       attr_reader :updated_resources, :status, :exception, :error_descriptions,
