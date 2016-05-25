@@ -264,7 +264,7 @@ class Chef
       end
 
       def headers(additional_headers = {})
-        headers = {}
+        headers = { "Content-Type" => "application/json" }
         headers["x-data-collector-token"] = data_collector_token unless data_collector_token.nil?
 
         headers.merge(additional_headers)

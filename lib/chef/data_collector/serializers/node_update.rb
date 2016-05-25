@@ -26,7 +26,7 @@ class Chef
             "entity_type"       => "node",
             "entity_uuid"       => node_uuid,
             "id"                => SecureRandom.uuid,
-            "message_version"   => "0.1.1",
+            "message_version"   => "1.0.0",
             "message_type"      => message_type,
             "organization_name" => organization,
             "recorded_at"       => Time.now.utc.iso8601,

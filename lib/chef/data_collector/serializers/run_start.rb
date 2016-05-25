@@ -20,7 +20,7 @@ class Chef
             "chef_server_fqdn"  => chef_server_fqdn,
             "entity_uuid"       => node_uuid,
             "id"                => run_status.run_id,
-            "message_version"   => "0.1.0",
+            "message_version"   => "1.0.0",
             "message_type"      => message_type,
             "node_name"         => run_status.node.name,
             "organization_name" => organization,
