@@ -203,6 +203,7 @@ class Chef
         send_to_data_collector(
           Serializers::RunEnd.new(
             run_status: run_status,
+            expanded_run_list: expanded_run_list,
             total_resource_count: resource_count,
             updated_resources: updated_resources,
             status: status,

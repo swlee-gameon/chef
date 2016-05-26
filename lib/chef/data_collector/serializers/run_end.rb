@@ -6,6 +6,7 @@ class Chef
     class Serializers
       class RunEnd < Base
         attr_reader :error_descriptions
+        attr_reader :expanded_run_list
         attr_reader :run_status
         attr_reader :status
         attr_reader :total_resource_count
@@ -13,6 +14,7 @@ class Chef
 
         def initialize(opts)
           @error_descriptions   = opts[:error_descriptions]
+          @expanded_run_list    = opts[:expanded_run_list]
           @run_status           = opts[:run_status]
           @total_resource_count = opts[:total_resource_count]
           @updated_resources    = opts[:updated_resources]
@@ -27,6 +29,7 @@ class Chef
           document = {
             "chef_server_fqdn"       => chef_server_fqdn,
             "entity_uuid"            => node_uuid,
+            "expanded_run_list"      => expanded_run_list,
             "id"                     => run_status.run_id,
             "message_version"        => "1.0.0",
             "message_type"           => message_type,
