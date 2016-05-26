@@ -25,6 +25,7 @@ class Chef
             "node_name"         => run_status.node.name,
             "organization_name" => organization,
             "run_id"            => run_status.run_id,
+            "source"            => collector_source,
             "start_time"        => run_status.start_time.utc.iso8601
           }
         end

@@ -31,19 +31,14 @@ class Chef
             "organization_name" => organization,
             "recorded_at"       => Time.now.utc.iso8601,
             "remote_hostname"   => node["fqdn"],
-            "request_id"        => "",
             "requestor_name"    => node.name,
             "requestor_type"    => "client",
             "service_hostname"  => chef_server_fqdn,
-            "source"            => source,
+            "source"            => collector_source,
             "task"              => "update",
             "user_agent"        => Chef::HTTP::HTTPRequest::DEFAULT_UA,
             "data"              => node
           }
-        end
-
-        def source
-          solo_run? ? "chef_solo" : "chef_client"
         end
       end
     end

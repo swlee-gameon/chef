@@ -1,6 +1,5 @@
 #
 # Author:: Adam Leff (<adamleff@chef.io>)
-# Author:: John Keiser (jkeiser@chef.io>)
 # Auther:: Ryan Cragun (<ryan@chef.io>)
 #
 # Copyright:: Copyright 2012-2016, Chef Software Inc.
@@ -21,6 +20,7 @@
 
 require "uri"
 require "chef/event_dispatch/base"
+require "chef/data_collector/resource_report"
 require "chef/data_collector/serializers/node_update"
 require "chef/data_collector/serializers/run_end"
 require "chef/data_collector/serializers/run_start"
@@ -42,59 +42,6 @@ class Chef
 
       acceptable_modes.include?(Chef::Config[:data_collector_mode])
     end
-
-    class ResourceReport < Struct.new(:new_resource,
-                                      :current_resource,
-                                      :action,
-                                      :exception,
-                                      :elapsed_time)
-
-      def self.for_current_resource(new_resource, action, current_resource)
-        new.tap do |report|
-          report.new_resource     = new_resource
-          report.action           = action
-          report.current_resource = current_resource
-        end
-      end
-
-      def self.for_exception(new_resource, action, exception)
-        new.tap do |report|
-          report.new_resource = new_resource
-          report.action       = action
-          report.exception    = exception
-        end
-      end
-
-      def to_hash
-        hash = {
-          "type"     => new_resource.resource_name.to_sym,
-          "name"     => new_resource.name.to_s,
-          "id"       => new_resource.identity.to_s,
-          "after"    => new_resource.state_for_resource_reporter,
-          "before"   => current_resource ? current_resource.state_for_resource_reporter : {},
-          "duration" => (elapsed_time * 1000).to_i.to_s,
-          "delta"    => new_resource.respond_to?(:diff) ? new_resource.diff : "",
-          "result"   => action.to_s
-        }
-
-        if new_resource.cookbook_name
-          hash["cookbook_name"]    = new_resource.cookbook_name
-          hash["cookbook_version"] = new_resource.cookbook_version.version
-        end
-
-        hash
-      end
-      alias :to_h :to_hash
-      alias :for_json :to_hash
-
-      def finish
-        self.elapsed_time = new_resource.elapsed_time
-      end
-
-      def success?
-        !self.exception
-      end
-    end # End class ResourceReport
 
     class Reporter < EventDispatch::Base
       attr_reader :updated_resources, :status, :exception, :error_descriptions,
@@ -133,7 +80,7 @@ class Chef
       def resource_current_state_loaded(new_resource, action, current_resource)
         return if nested_resource?(new_resource)
         update_current_resource_report(
-          Chef::DataCollector::ResourceReport.for_current_resource(
+          Chef::DataCollector::ResourceReport.new(
             new_resource,
             action,
             current_resource
@@ -142,22 +89,31 @@ class Chef
       end
 
       def resource_up_to_date(new_resource, action)
+        current_resource_report.up_to_date unless nested_resource?(new_resource)
         increment_resource_count
-        update_current_resource_report(nil) unless nested_resource?(new_resource)
       end
 
-      def resource_skipped(resource, action, conditional)
+      def resource_skipped(new_resource, action, conditional)
         increment_resource_count
-        update_current_resource_report(nil) unless nested_resource?(resource)
+        return if nested_resource?(new_resource)
+
+        update_current_resource_report(
+          Chef::DataCollector::ResourceReport.new(
+            new_resource,
+            action
+          )
+        )
+        current_resource_report.skipped(conditional)
       end
 
       def resource_updated(new_resource, action)
+        current_resource_report.updated unless nested_resource?(new_resource)
         increment_resource_count
       end
 
       def resource_failed(new_resource, action, exception)
+        current_resource_report.failed(exception) unless nested_resource?(new_resource)
         increment_resource_count
-
         update_error_description(
           Formatters::ErrorMapper.resource_failed(
             new_resource,
@@ -165,14 +121,6 @@ class Chef
             exception
           ).for_json
         )
-
-        update_current_resource_report(
-          Chef::DataCollector::ResourceReport.for_exception(
-            new_resource,
-            action,
-            exception
-          )
-        ) unless nested_resource?(new_resource)
       end
 
       def resource_completed(new_resource)

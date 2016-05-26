@@ -203,7 +203,7 @@ describe Chef::DataCollector::Reporter do
     context "when resource is not a nested resource" do
       it "updates the resource report" do
         allow(reporter).to receive(:nested_resource?).and_return(false)
-        expect(Chef::DataCollector::ResourceReport).to receive(:for_current_resource).with(
+        expect(Chef::DataCollector::ResourceReport).to receive(:new).with(
           new_resource,
           action,
           current_resource)
@@ -215,13 +215,15 @@ describe Chef::DataCollector::Reporter do
   end
 
   describe '#resource_up_to_date' do
-    let(:new_resource) { double("new_resource") }
-    let(:action)       { double("action") }
+    let(:new_resource)    { double("new_resource") }
+    let(:action)          { double("action") }
+    let(:resource_report) { double("resource_report")}
 
     before do
       allow(reporter).to receive(:increment_resource_count)
       allow(reporter).to receive(:nested_resource?)
-      allow(reporter).to receive(:update_current_resource_report)
+      allow(reporter).to receive(:current_resource_report).and_return(resource_report)
+      allow(resource_report).to receive(:up_to_date)
     end
 
     it "increments the resource count" do
@@ -230,31 +232,33 @@ describe Chef::DataCollector::Reporter do
     end
 
     context "when the resource is a nested resource" do
-      it "does not nil out the current resource report" do
+      it "does not mark the resource report as up-to-date" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(true)
-        expect(reporter).not_to receive(:update_current_resource_report)
+        expect(resource_report).not_to receive(:up_to_date)
         reporter.resource_up_to_date(new_resource, action)
       end
     end
 
     context "when the resource is not a nested resource" do
-      it "does not nil out the current resource report" do
+      it "marks the resource report as up-to-date" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(false)
-        expect(reporter).to receive(:update_current_resource_report).with(nil)
+        expect(resource_report).to receive(:up_to_date)
         reporter.resource_up_to_date(new_resource, action)
       end
     end
   end
 
   describe '#resource_skipped' do
-    let(:new_resource) { double("new_resource") }
-    let(:action)       { double("action") }
-    let(:conditional)  { double("conditional") }
+    let(:new_resource)    { double("new_resource") }
+    let(:action)          { double("action") }
+    let(:conditional)     { double("conditional") }
+    let(:resource_report) { double("resource_report")}
 
     before do
       allow(reporter).to receive(:increment_resource_count)
       allow(reporter).to receive(:nested_resource?)
-      allow(reporter).to receive(:update_current_resource_report)
+      allow(reporter).to receive(:current_resource_report).and_return(resource_report)
+      allow(resource_report).to receive(:skipped)
     end
 
     it "increments the resource count" do
@@ -263,39 +267,64 @@ describe Chef::DataCollector::Reporter do
     end
 
     context "when the resource is a nested resource" do
-      it "does not nil out the current resource report" do
+      it "does not mark the resource report as skipped" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(true)
-        expect(reporter).not_to receive(:update_current_resource_report)
+        expect(resource_report).not_to receive(:skipped).with(conditional)
         reporter.resource_skipped(new_resource, action, conditional)
       end
     end
 
     context "when the resource is not a nested resource" do
-      it "does not nil out the current resource report" do
+      it "updates the resource report" do
+        allow(reporter).to receive(:nested_resource?).and_return(false)
+        expect(Chef::DataCollector::ResourceReport).to receive(:new).with(
+          new_resource,
+          action)
+        .and_return("resource_report")
+        expect(reporter).to receive(:update_current_resource_report).with("resource_report")
+        reporter.resource_skipped(new_resource, action, conditional)
+      end
+
+      it "marks the resource report as skipped" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(false)
-        expect(reporter).to receive(:update_current_resource_report).with(nil)
+        expect(resource_report).to receive(:skipped).with(conditional)
         reporter.resource_skipped(new_resource, action, conditional)
       end
     end
   end
 
   describe '#resource_updated' do
+    let(:resource_report) { double("resource_report")}
+
+    before do
+      allow(reporter).to receive(:current_resource_report).and_return(resource_report)
+      allow(resource_report).to receive(:updated)
+    end
+
     it "increments the resource count" do
       expect(reporter).to receive(:increment_resource_count)
+      reporter.resource_updated("new_resource", "action")
+    end
+
+    it "marks the resource report as updated" do
+      expect(resource_report).to receive(:updated)
       reporter.resource_updated("new_resource", "action")
     end
   end
 
   describe '#resource_failed' do
-    let(:new_resource) { double("new_resource") }
-    let(:action)       { double("action") }
-    let(:exception)    { double("exception") }
-    let(:error_mapper) { double("error_mapper")}
+    let(:new_resource)    { double("new_resource") }
+    let(:action)          { double("action") }
+    let(:exception)       { double("exception") }
+    let(:error_mapper)    { double("error_mapper")}
+    let(:resource_report) { double("resource_report")}
+
 
     before do
       allow(reporter).to receive(:increment_resource_count)
       allow(reporter).to receive(:update_error_description)
-      allow(reporter).to receive(:update_current_resource_report)
+      allow(reporter).to receive(:current_resource_report).and_return(resource_report)
+      allow(resource_report).to receive(:failed)
       allow(Chef::Formatters::ErrorMapper).to receive(:resource_failed).and_return(error_mapper)
       allow(error_mapper).to receive(:for_json)
     end
@@ -317,22 +346,17 @@ describe Chef::DataCollector::Reporter do
     end
 
     context "when the resource is not a nested resource" do
-      it "updates the current resource report" do
+      it "marks the resource report as failed" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(false)
-        expect(Chef::DataCollector::ResourceReport).to receive(:for_exception).with(
-          new_resource,
-          action,
-          exception
-        ).and_return("resource_exception_report")
-        expect(reporter).to receive(:update_current_resource_report).with("resource_exception_report")
+        expect(resource_report).to receive(:failed).with(exception)
         reporter.resource_failed(new_resource, action, exception)
       end
     end
 
     context "when the resource is a nested resource" do
-      it "does not update the current resource report" do
+      it "does not mark the resource report as failed" do
         allow(reporter).to receive(:nested_resource?).with(new_resource).and_return(true)
-        expect(reporter).not_to receive(:update_current_resource_report)
+        expect(resource_report).not_to receive(:failed).with(exception)
         reporter.resource_failed(new_resource, action, exception)
       end
     end

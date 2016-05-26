@@ -38,6 +38,10 @@ class Chef
           Chef::Config[:chef_server_url].match(%r(/organizations/(\w+))).nil? ? "unknown_organization" : $1
         end
 
+        def collector_source
+          solo_run? ? "chef_solo" : "chef_client"
+        end
+
         def solo_run?
           Chef::Config[:solo] || Chef::Config[:local_mode]
         end

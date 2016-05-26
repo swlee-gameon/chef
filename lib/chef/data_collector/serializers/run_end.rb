@@ -37,6 +37,7 @@ class Chef
             "run_list"               => run_status.node.run_list.for_json,
             "start_time"             => run_status.start_time.utc.iso8601,
             "end_time"               => run_status.end_time.utc.iso8601,
+            "source"                 => collector_source,
             "status"                 => status,
             "total_resource_count"   => total_resource_count,
             "updated_resource_count" => updated_resources.count
