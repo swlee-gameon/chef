@@ -1,5 +1,5 @@
 verifier:
-  name: inspec
+  name: busser
 
 suites:
   - name: default
